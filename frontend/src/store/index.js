@@ -33,12 +33,15 @@ const userSlice = createSlice({
       Object.assign(state, action.payload);
     },
     setCredentials: (state, action) => {
-      const { token, ...user } = action.payload;
-      Object.assign(state, user);
+      const { token, _id, ...rest } = action.payload;
+      const id = _id || rest.id;
+      Object.assign(state, rest);
+      state.id = id;
+      state._id = id;
       state.token = token;
       state.isAuthenticated = true;
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify({ ...rest, id, _id: id }));
     },
     logout: (state) => {
       state.id = null;

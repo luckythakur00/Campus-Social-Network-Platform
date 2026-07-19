@@ -1,82 +1,94 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PostCard } from "@/components/cards/PostCard";
-import { posts as seedPosts } from "@/lib/mock-data";
 import { useAppSelector } from "@/store";
-import { Image, Briefcase, Megaphone, Video } from "lucide-react";
+import { api } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Feed() {
   const user = useAppSelector((s) => s.user);
   const [text, setText] = useState("");
-  const [posts, setPosts] = useState(seedPosts);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
 
-  const submit = () => {
+  // Fetch all posts from backend on mount
+  useEffect(() => {
+    api
+      .get("/posts")
+      .then(setPosts)
+      .catch(() => toast.error("Failed to load posts"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const submit = async () => {
     if (!text.trim()) return;
-    setPosts([
-      {
-        id: `p_${Date.now()}`,
-        authorId: user.id,
-        content: text,
-        time: "now",
-        likes: 0,
-        comments: 0,
-        shares: 0,
-      },
-      ...posts,
-    ]);
-    setText("");
-    toast.success("Posted to your feed");
+    setPosting(true);
+    try {
+      const newPost = await api.post("/posts", { content: text });
+      setPosts([newPost, ...posts]);
+      setText("");
+      toast.success("Posted successfully!");
+    } catch (err) {
+      toast.error(err.message || "Failed to create post");
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
     <div className="space-y-4">
+      {/* Composer */}
       <Card className="p-5">
         <div className="flex gap-3">
           <Avatar className="size-11 shrink-0">
             <AvatarImage src={user.avatar} />
-            <AvatarFallback>{user.name[0]}</AvatarFallback>
+            <AvatarFallback>{user.name?.[0]}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <Textarea
-              placeholder={`What's on your mind, ${user.name.split(" ")[0]}?`}
+              placeholder={`What's on your mind, ${user.name?.split(" ")[0]}?`}
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="resize-none border-0 bg-muted focus-visible:ring-1"
               rows={2}
             />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap gap-1">
-                <Button size="sm" variant="ghost">
-                  <Image className="size-4 mr-1.5 text-primary" />
-                  Photo
-                </Button>
-                <Button size="sm" variant="ghost">
-                  <Video className="size-4 mr-1.5 text-secondary" />
-                  Video
-                </Button>
-                <Button size="sm" variant="ghost">
-                  <Briefcase className="size-4 mr-1.5 text-success" />
-                  Job
-                </Button>
-                <Button size="sm" variant="ghost">
-                  <Megaphone className="size-4 mr-1.5 text-warning" />
-                  Announce
-                </Button>
-              </div>
-              <Button size="sm" onClick={submit} className="gradient-brand text-white border-0">
-                Post
+            <div className="mt-3 flex items-center justify-end">
+              <Button
+                size="sm"
+                onClick={submit}
+                disabled={posting || !text.trim()}
+                className="gradient-brand text-white border-0"
+              >
+                {posting ? (
+                  <>
+                    <Loader2 className="size-4 mr-1.5 animate-spin" /> Posting…
+                  </>
+                ) : (
+                  "Post"
+                )}
               </Button>
             </div>
           </div>
         </div>
       </Card>
-      {posts.map((p) => (
-        <PostCard key={p.id} post={p} />
-      ))}
+
+      {/* Posts list */}
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : posts.length === 0 ? (
+        <Card className="p-10 text-center text-muted-foreground">
+          No posts yet. Be the first to post!
+        </Card>
+      ) : (
+        posts.map((p) => <PostCard key={p._id} post={p} />)
+      )}
     </div>
   );
 }

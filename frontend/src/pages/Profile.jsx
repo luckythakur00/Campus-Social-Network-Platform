@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/cards/PostCard";
-import { findUser, posts, users } from "@/lib/mock-data";
+import { useAppSelector } from "@/store";
+import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   Briefcase,
@@ -15,12 +17,37 @@ import {
   Globe,
   Award,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Profile() {
   const { id } = useParams();
-  const u = findUser(id || "u_1");
-  const myPosts = posts.filter((p) => p.authorId === u.id);
+  const currentUser = useAppSelector((s) => s.user);
+
+  // If viewing own profile (id matches logged-in user), use Redux data for accuracy
+  const isOwnProfile = id === currentUser.id || id === currentUser._id;
+  const u = isOwnProfile
+    ? { ...currentUser, _id: currentUser.id }
+    : { name: "", avatar: "", role: "", headline: "", _id: id };
+
+  const [userPosts, setUserPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  useEffect(() => {
+    setLoadingPosts(true);
+    api
+      .get("/posts")
+      .then((all) => {
+        // Filter posts authored by this user
+        const filtered = all.filter(
+          (p) => p.author?._id === id || p.author?._id === currentUser.id,
+        );
+        setUserPosts(filtered);
+      })
+      .catch(() => toast.error("Failed to load posts"))
+      .finally(() => setLoadingPosts(false));
+  }, [id]);
+
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden p-0">
@@ -31,7 +58,7 @@ export default function Profile() {
           <div className="flex flex-wrap items-end justify-between gap-4 -mt-12">
             <Avatar className="size-28 border-4 border-card">
               <AvatarImage src={u.avatar} />
-              <AvatarFallback>{u.name[0]}</AvatarFallback>
+              <AvatarFallback>{u.name?.[0]}</AvatarFallback>
             </Avatar>
             <div className="flex gap-2">
               <Button variant="outline">
@@ -144,9 +171,15 @@ export default function Profile() {
           </div>
         </TabsContent>
         <TabsContent value="posts" className="mt-4 space-y-4">
-          {(myPosts.length ? myPosts : posts.slice(0, 2)).map((p) => (
-            <PostCard key={p.id} post={p} />
-          ))}
+          {loadingPosts ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : userPosts.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">No posts yet.</Card>
+          ) : (
+            userPosts.map((p) => <PostCard key={p._id} post={p} />)
+          )}
         </TabsContent>
         <TabsContent value="experience" className="mt-4">
           <Card className="p-5 space-y-4">
@@ -170,25 +203,7 @@ export default function Profile() {
           </Card>
         </TabsContent>
         <TabsContent value="connections" className="mt-4">
-          <div className="grid sm:grid-cols-2 gap-3">
-            {users.map((c) => (
-              <Card key={c.id} className="p-4 flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={c.avatar} />
-                  <AvatarFallback>{c.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    to={`/profile/${c.id}`}
-                    className="text-sm font-medium hover:underline block truncate"
-                  >
-                    {c.name}
-                  </Link>
-                  <p className="text-xs text-muted-foreground truncate">{c.headline}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card className="p-8 text-center text-muted-foreground">Connections coming soon.</Card>
         </TabsContent>
       </Tabs>
     </div>
