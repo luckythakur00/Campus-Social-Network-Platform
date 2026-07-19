@@ -1,47 +1,31 @@
+// models/Post.js - Defines the shape of a Post in MongoDB
+
 const mongoose = require("mongoose");
 
-const postSchema = mongoose.Schema(
+// A single comment inside a post
+const commentSchema = new mongoose.Schema(
   {
-    author: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "User",
-    },
-    content: {
-      type: String,
-      required: [true, "Please add some content"],
-    },
-    image: {
-      type: String,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
+const postSchema = new mongoose.Schema(
+  {
+    author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true },
+    image: { type: String },
     type: {
       type: String,
       enum: ["text", "job", "announcement"],
       default: "text",
     },
-    tags: [
-      {
-        type: String,
-      },
-    ],
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    commentsCount: {
-      type: Number,
-      default: 0,
-    },
-    sharesCount: {
-      type: Number,
-      default: 0,
-    },
+    tags: [{ type: String }],
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // array of user IDs who liked
+    comments: [commentSchema], // array of comments
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const Post = mongoose.model("Post", postSchema);

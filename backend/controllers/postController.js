@@ -1,99 +1,155 @@
-const asyncHandler = require("express-async-handler");
 const Post = require("../models/Post");
+const User = require("../models/User");
 
-// @desc    Get all posts
-// @route   GET /api/posts
-// @access  Public (or Private depending on requirements)
-const getPosts = asyncHandler(async (req, res) => {
-  const posts = await Post.find().populate("author", "name avatar role").sort({ createdAt: -1 });
-  res.status(200).json(posts);
-});
-
-// @desc    Get a single post
-// @route   GET /api/posts/:id
-// @access  Public
-const getPostById = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id).populate("author", "name avatar role");
-  
-  if (!post) {
-    res.status(404);
-    throw new Error("Post not found");
+const getPosts = async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("author", "name avatar role")
+      .populate("comments.user", "name avatar")
+      .sort({ createdAt: -1 });
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
+};
 
-  res.status(200).json(post);
-});
+const createPost = async (req, res) => {
+  try {
+    const { content, image, tags, type } = req.body;
 
-// @desc    Create new post
-// @route   POST /api/posts
-// @access  Private
-const createPost = asyncHandler(async (req, res) => {
-  const { content, image, tags, type } = req.body;
+    if (!content) {
+      return res
+        .status(400)
+        .json({ message: "Please add some text to the post" });
+    }
 
-  if (!content) {
-    res.status(400);
-    throw new Error("Please add a text content to the post");
+    const post = await Post.create({
+      content,
+      image,
+      tags,
+      type,
+      author: req.user._id, // Add the logged in user as the author
+    });
+
+    const populatedPost = await Post.findById(post._id).populate(
+      "author",
+      "name avatar role",
+    );
+    res.status(201).json(populatedPost);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
+};
 
-  const post = await Post.create({
-    content,
-    image,
-    tags,
-    type,
-    author: req.user.id,
-  });
+const toggleLikePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
 
-  const createdPost = await Post.findById(post._id).populate("author", "name avatar role");
-  res.status(201).json(createdPost);
-});
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
-// @desc    Delete post
-// @route   DELETE /api/posts/:id
-// @access  Private
-const deletePost = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id);
+    const alreadyLikedIndex = post.likes.indexOf(req.user._id);
 
-  if (!post) {
-    res.status(404);
-    throw new Error("Post not found");
+    if (alreadyLikedIndex !== -1) {
+      post.likes.splice(alreadyLikedIndex, 1);
+    } else {
+      post.likes.push(req.user._id);
+    }
+
+    await post.save();
+    res.status(200).json(post);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
+};
 
-  // Make sure the logged in user matches the post author
-  if (post.author.toString() !== req.user.id && req.user.role !== "admin") {
-    res.status(401);
-    throw new Error("User not authorized");
+const addComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ message: "Comment text is required" });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const newComment = {
+      user: req.user._id,
+      text: text,
+    };
+
+    post.comments.push(newComment);
+    await post.save();
+
+    const updatedPost = await Post.findById(req.params.id)
+      .populate("author", "name avatar role")
+      .populate("comments.user", "name avatar");
+
+    res.status(200).json(updatedPost);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
+};
 
-  await post.deleteOne();
-  res.status(200).json({ id: req.params.id });
-});
+const seedPosts = async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Please register a user first before seeding posts" });
+    }
 
-// @desc    Like / Unlike a post
-// @route   PUT /api/posts/:id/like
-// @access  Private
-const toggleLikePost = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id);
+    const postCount = await Post.countDocuments();
+    if (postCount > 0) {
+      return res
+        .status(400)
+        .json({ message: "Posts already exist. Skipping seed." });
+    }
 
-  if (!post) {
-    res.status(404);
-    throw new Error("Post not found");
+    const dummyPosts = [
+      {
+        author: user._id,
+        content:
+          "Just built this amazing Campus Social Network platform using the MERN stack! The frontend is running React and Tailwind, and the backend is Express and MongoDB. So excited to share it with everyone!",
+        type: "text",
+        tags: ["MERN", "WebDev", "CampusConnect"],
+      },
+      {
+        author: user._id,
+        content:
+          "Hey everyone! We have a guest lecture from Google's engineering team happening this Friday at 4 PM in the main auditorium. Don't miss it!",
+        type: "announcement",
+        tags: ["Event", "Google", "TechTalk"],
+      },
+      {
+        author: user._id,
+        content:
+          "We are looking for a Junior Frontend Developer to join our startup. Must know React and have an eye for design. Message me for details!",
+        type: "job",
+        tags: ["Hiring", "Frontend", "React"],
+      },
+    ];
+
+    await Post.insertMany(dummyPosts);
+    res.status(201).json({ message: "Dummy posts added successfully!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-
-  const alreadyLiked = post.likes.includes(req.user.id);
-
-  if (alreadyLiked) {
-    post.likes = post.likes.filter((userId) => userId.toString() !== req.user.id);
-  } else {
-    post.likes.push(req.user.id);
-  }
-
-  await post.save();
-  res.status(200).json({ id: req.params.id, likes: post.likes });
-});
+};
 
 module.exports = {
   getPosts,
-  getPostById,
   createPost,
-  deletePost,
   toggleLikePost,
+  addComment,
+  seedPosts,
 };
