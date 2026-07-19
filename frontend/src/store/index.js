@@ -1,22 +1,60 @@
 import { configureStore, createSlice } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 
+// Read persisted user/token from localStorage on startup
+const storedToken = localStorage.getItem("token");
+const storedUser = (() => {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+})();
+
 const userSlice = createSlice({
   name: "user",
-  initialState: {
-    id: "u_1",
-    name: "Aarav Sharma",
-    email: "aarav@campus.edu",
-    avatar: "https://i.pravatar.cc/150?img=13",
-    role: "student",
-    headline: "CS Undergrad · Full-stack dev",
-  },
+  initialState: storedUser
+    ? { ...storedUser, token: storedToken, isAuthenticated: true }
+    : {
+        id: null,
+        name: "",
+        email: "",
+        avatar: "",
+        role: "",
+        headline: "",
+        token: null,
+        isAuthenticated: false,
+      },
   reducers: {
     setRole: (state, action) => {
       state.role = action.payload;
     },
     updateProfile: (state, action) => {
       Object.assign(state, action.payload);
+    },
+    // Called after successful login / register
+    setCredentials: (state, action) => {
+      const { token, ...user } = action.payload;
+      Object.assign(state, user);
+      state.token = token;
+      state.isAuthenticated = true;
+      // Persist to localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+    },
+    // Called on logout
+    logout: (state) => {
+      state.id = null;
+      state.name = "";
+      state.email = "";
+      state.avatar = "";
+      state.role = "";
+      state.headline = "";
+      state.token = null;
+      state.isAuthenticated = false;
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     },
   },
 });
@@ -104,7 +142,7 @@ const notificationsSlice = createSlice({
   },
 });
 
-export const { setRole, updateProfile } = userSlice.actions;
+export const { setRole, updateProfile, setCredentials, logout } = userSlice.actions;
 export const { setTheme, toggleTheme } = themeSlice.actions;
 export const { toggleSidebar, setMobileNav } = uiSlice.actions;
 export const { markAllRead, markRead } = notificationsSlice.actions;

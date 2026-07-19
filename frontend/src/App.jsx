@@ -4,6 +4,19 @@ import { AppLayout } from "@/components/layouts/AppLayout";
 import { PublicLayout } from "@/components/layouts/PublicLayout";
 import { AuthLayout } from "@/components/layouts/AuthLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAppSelector } from "@/store";
+
+// Redirect to /login if not authenticated
+function PrivateRoute({ children }) {
+  const isAuthenticated = useAppSelector((s) => s.user.isAuthenticated);
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+// Redirect to /feed if already logged in
+function GuestRoute({ children }) {
+  const isAuthenticated = useAppSelector((s) => s.user.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/feed" replace /> : children;
+}
 
 const Landing = lazy(() => import("@/pages/Landing"));
 const About = lazy(() => import("@/pages/About"));
@@ -68,13 +81,13 @@ export default function App() {
         </Route>
 
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+          <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
         </Route>
 
-        <Route element={<AppLayout />}>
+        <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/post/:id" element={<PostDetail />} />

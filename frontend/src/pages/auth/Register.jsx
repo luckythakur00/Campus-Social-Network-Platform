@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Controller } from "react-hook-form";
+import { useAppDispatch } from "@/store";
+import { setCredentials } from "@/store";
+import { api } from "@/lib/api";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -24,16 +27,23 @@ const schema = z.object({
 
 export default function Register() {
   const nav = useNavigate();
+  const dispatch = useAppDispatch();
   const {
     register,
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues: { role: "student" } });
+
   const onSubmit = async (data) => {
-    await new Promise((r) => setTimeout(r, 500));
-    toast.success(`Welcome, ${data.name}! Check your email to verify.`);
-    nav("/verify-email");
+    try {
+      const result = await api.post("/auth/register", data);
+      dispatch(setCredentials(result));
+      toast.success(`Welcome to CampusConnect, ${result.name}!`);
+      nav("/feed");
+    } catch (err) {
+      toast.error(err.message || "Registration failed. Please try again.");
+    }
   };
   return (
     <Card className="p-8 border-0 shadow-none">

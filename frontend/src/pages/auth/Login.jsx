@@ -8,20 +8,30 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Lock, Github } from "lucide-react";
 import { toast } from "sonner";
+import { useAppDispatch } from "@/store";
+import { setCredentials } from "@/store";
+import { api } from "@/lib/api";
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(6) });
 
 export default function Login() {
   const nav = useNavigate();
+  const dispatch = useAppDispatch();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema) });
+
   const onSubmit = async (data) => {
-    await new Promise((r) => setTimeout(r, 500));
-    toast.success(`Welcome back, ${data.email}`);
-    nav("/feed");
+    try {
+      const result = await api.post("/auth/login", data);
+      dispatch(setCredentials(result));
+      toast.success(`Welcome back, ${result.name}!`);
+      nav("/feed");
+    } catch (err) {
+      toast.error(err.message || "Login failed. Please try again.");
+    }
   };
   return (
     <Card className="p-8 border-0 shadow-none">

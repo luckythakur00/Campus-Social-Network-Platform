@@ -21,7 +21,7 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
-import { useAppDispatch, useAppSelector, toggleSidebar, toggleTheme, setRole } from "@/store";
+import { useAppDispatch, useAppSelector, toggleSidebar, toggleTheme, setRole, logout } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -289,16 +289,13 @@ function Topbar() {
               <Settings className="size-4 mr-2" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Switch role (demo)
-            </DropdownMenuLabel>
-            {["student", "faculty", "alumni", "placement", "admin"].map((r) => (
-              <DropdownMenuItem key={r} onClick={() => dispatch(setRole(r))} className="capitalize">
-                {r}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/login")} className="text-destructive">
+            <DropdownMenuItem
+              onClick={() => {
+                dispatch(logout());
+                navigate("/login");
+              }}
+              className="text-destructive"
+            >
               <LogOut className="size-4 mr-2" /> Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
