@@ -1,7 +1,6 @@
 import { configureStore, createSlice } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 
-// Read persisted user/token from localStorage on startup
 const storedToken = localStorage.getItem("token");
 const storedUser = (() => {
   try {
@@ -17,15 +16,15 @@ const userSlice = createSlice({
   initialState: storedUser
     ? { ...storedUser, token: storedToken, isAuthenticated: true }
     : {
-        id: null,
-        name: "",
-        email: "",
-        avatar: "",
-        role: "",
-        headline: "",
-        token: null,
-        isAuthenticated: false,
-      },
+      id: null,
+      name: "",
+      email: "",
+      avatar: "",
+      role: "",
+      headline: "",
+      token: null,
+      isAuthenticated: false,
+    },
   reducers: {
     setRole: (state, action) => {
       state.role = action.payload;
@@ -33,17 +32,14 @@ const userSlice = createSlice({
     updateProfile: (state, action) => {
       Object.assign(state, action.payload);
     },
-    // Called after successful login / register
     setCredentials: (state, action) => {
       const { token, ...user } = action.payload;
       Object.assign(state, user);
       state.token = token;
       state.isAuthenticated = true;
-      // Persist to localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
     },
-    // Called on logout
     logout: (state) => {
       state.id = null;
       state.name = "";
