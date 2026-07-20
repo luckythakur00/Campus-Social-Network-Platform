@@ -4,7 +4,6 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 
-// Connect to MongoDB
 connectDB();
 
 const app = express();
