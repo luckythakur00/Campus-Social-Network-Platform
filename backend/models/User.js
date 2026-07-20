@@ -1,4 +1,4 @@
-// models/User.js - Defines the shape of a User in MongoDB
+
 
 const mongoose = require("mongoose");
 
@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // stored as a bcrypt hash
+    password: { type: String, required: true }, 
     role: {
       type: String,
       enum: ["student", "faculty", "alumni", "placement", "admin"],
@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
     batch: { type: String },
     company: { type: String },
   },
-  { timestamps: true }, // adds createdAt and updatedAt automatically
+  { timestamps: true }, 
 );
 
 const User = mongoose.model("User", userSchema);

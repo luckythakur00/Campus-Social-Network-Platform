@@ -1,8 +1,7 @@
-// models/Post.js - Defines the shape of a Post in MongoDB
 
 const mongoose = require("mongoose");
 
-// A single comment inside a post
+
 const commentSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -22,8 +21,8 @@ const postSchema = new mongoose.Schema(
       default: "text",
     },
     tags: [{ type: String }],
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // array of user IDs who liked
-    comments: [commentSchema], // array of comments
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    comments: [commentSchema], 
   },
   { timestamps: true }
 );
