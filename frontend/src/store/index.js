@@ -1,6 +1,21 @@
 import { configureStore, createSlice } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 
+/**
+ * Generate a stable, deterministic avatar URL from a user's name.
+ * Uses ui-avatars.com which always returns the same image for the same name.
+ * This prevents the avatar from randomly changing on refresh.
+ */
+function getStableAvatar(name, id) {
+  const seed = name || id || "User";
+  const initials = encodeURIComponent(seed);
+  // Pick a deterministic background color based on the name
+  const colors = ["6366f1", "8b5cf6", "ec4899", "f59e0b", "10b981", "3b82f6", "ef4444", "14b8a6"];
+  const idx = seed.charCodeAt(0) % colors.length;
+  const bg = colors[idx];
+  return `https://ui-avatars.com/api/?name=${initials}&background=${bg}&color=fff&size=150&bold=true&rounded=true`;
+}
+
 const storedToken = localStorage.getItem("token");
 const storedUser = (() => {
   try {
@@ -10,6 +25,13 @@ const storedUser = (() => {
     return null;
   }
 })();
+
+// If a logged-in user was stored without an avatar, fill it in now so the
+// avatar is stable across page refreshes without requiring a new login.
+if (storedUser && !storedUser.avatar) {
+  storedUser.avatar = getStableAvatar(storedUser.name, storedUser.id || storedUser._id);
+  localStorage.setItem("user", JSON.stringify(storedUser));
+}
 
 const userSlice = createSlice({
   name: "user",
@@ -31,10 +53,18 @@ const userSlice = createSlice({
     },
     updateProfile: (state, action) => {
       Object.assign(state, action.payload);
+      // Persist updated profile fields (including avatar) to localStorage
+      const { token, ...userFields } = state;
+      localStorage.setItem("user", JSON.stringify(userFields));
     },
     setCredentials: (state, action) => {
       const { token, _id, ...rest } = action.payload;
       const id = _id || rest.id;
+      // If the backend returned no avatar (empty string / null), generate a
+      // stable deterministic one so it never changes between page refreshes.
+      if (!rest.avatar) {
+        rest.avatar = getStableAvatar(rest.name, id);
+      }
       Object.assign(state, rest);
       state.id = id;
       state._id = id;
