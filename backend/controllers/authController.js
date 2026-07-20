@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
-      password: hashedPassword, // save the hashed password
+      password: hashedPassword,
       role: role || "student",
     });
 

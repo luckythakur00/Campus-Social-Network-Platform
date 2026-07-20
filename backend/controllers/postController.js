@@ -29,7 +29,7 @@ const createPost = async (req, res) => {
       image,
       tags,
       type,
-      author: req.user._id, // Add the logged in user as the author
+      author: req.user._id,
     });
 
     const populatedPost = await Post.findById(post._id).populate(
